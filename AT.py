@@ -4,11 +4,15 @@ from datetime import datetime as dt
 import requests
 from datetime import timezone
 import numpy as np
-import dotenv as dt 
-
+from dotenv import load_dotenv
+import os 
+load_dotenv()
 api = sj.Shioaji(simulation=True)
+print(os.getenv("api_key"))
+print(os.getenv("secrect_key"))
 api.login(
-    api_key='',
-    secret_key=""
+    api_key=f'{os.getenv("api_key")}',
+    secret_key=f'{os.getenv("secrect_key")}'
           
 )
+
