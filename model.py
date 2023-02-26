@@ -17,19 +17,19 @@ conn = psycopg2.connect(
     user=os.getenv("psql_user"),
     password=os.getenv("psql_pswd")
 )
-# df = pd.read_csv("stock_data.csv")
+
 df = pd.read_sql_query("SELECT * FROM price", conn)
 df  = df[df["stock_id"]=='0015']
-# df = pd.read_sql_table("price",conn)
-# 將數據進行歸一化處理
+
+# MinMaxScaler
 scaler = MinMaxScaler()
 data = scaler.fit_transform(df[['收盤價']].values)
 
-# 定義訓練和測試數據集
+# train & test 
 train_data = data[:]
 test_data = data[:]
 
-# 定義LSTM模型
+# define LSTM model
 class LSTM(nn.Module):
     def __init__(self, input_size=1, hidden_size=32, output_size=1):
         super().__init__()
@@ -46,7 +46,7 @@ model = LSTM()
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-# 訓練模型
+# train model 
 epochs = 50
 for epoch in range(epochs):
     train_loss = 0.0
@@ -62,17 +62,17 @@ for epoch in range(epochs):
 
     print(f'Epoch {epoch+1}, Train Loss: {train_loss}')
 
-# 預測股票價格
+# predict model 
 y_pred = []
 for i in range(len(test_data)-30):
     x = torch.tensor(test_data[i:i+30], dtype=torch.float32)
     with torch.no_grad():
         y_pred.append(model(x).item())
 
-# 將預測結果轉換回原始數據的格式
+# inverse
 y_pred = scaler.inverse_transform(np.array(y_pred).reshape(-1, 1))
 
-# 繪製預測結果
+# plot predictions
 # plt.figure(figsize=(12, 6))
 # plt.plot(df['date'][800+30:], test_data[30:], label='Actual Price')
 # plt.plot(df['date'][800+30:], y_pred, label='Predicted Price')
