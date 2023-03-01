@@ -3,26 +3,18 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+import preprocessing as ps 
 import sqlite3 as sq 
-import psycopg2
 import dotenv
 import os  
 import connectorx as cx 
 # 讀取股票數據
 dotenv.load_dotenv()
 
-print("connect & read the sql query....")
-df = cx.read_sql(f"postgres://{os.getenv('psql_user')}:{os.getenv('psql_pswd')}@{os.getenv('psql_host')}:/{os.getenv('psql_database')}","SELECT * FROM price")
-df  = df[df["stock_id"]=='2330']
-print("start to model building and trading....")
+ps = ps.datascience() 
+data = ps.DII_analysis()
 # MinMaxScaler
-scaler = MinMaxScaler()
-data = scaler.fit_transform(df[['收盤價']].values)
-days = 3
 # train & test 
-train_data = data[:int(len(data)*0.7)]
-test_data = data[int(len(data)*0.7):]
 
 class LSTM(nn.Module):
 # define LSTM model
