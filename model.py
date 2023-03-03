@@ -47,8 +47,8 @@ optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 criterion = nn.MSELoss()
 
 
-train_x = torch.tensor(data["train_x"],dtype=torch.float32)
-train_y = torch.tensor(data["train_y"],dtype=torch.float32)
+train_x = torch.tensor(data["train_x"],dtype=torch.float64)
+train_y = torch.tensor(data["train_y"],dtype=torch.float)
 epochs = 15
 print("data training.....")
 for epoch in range(epochs):
