@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, MinMaxScaler,PowerTransformer
+from sklearn.utils import shuffle
 import warnings as wn
 from random import sample
 from sklearn.model_selection import train_test_split as tts
@@ -40,42 +41,48 @@ class datascience:
 
     def DII_analysis(self, stock,model_exist=False):
         
-        iterate_count = range(1)
+        iterate_count = range(3)
         if model_exist ==True:
             iterate_count = range(1)
+        print("read database....")
         df = cx.read_sql(f"postgres://{os.getenv('psql_user')}:{os.getenv('psql_pswd')}@{os.getenv('psql_host')}/{os.getenv('psql_database')}","SELECT * FROM price")  # "
         df = df[df["stock_id"]==f'{stock}']
         self.df = df
-        train_y, train_y_one_hot, self.one, self.label = self.train_y_create(df)
-        df = df.join(train_y)
-        train_x = df.drop(["train_y", "date", "stock_id", "最後揭示買價", "最後揭示買價", "最後揭示賣價", "最後揭示賣量", "最後揭示買量", "本益比",'漲跌價差'],axis=1)
-        train_x = train_x[:int(len(train_x)*0.7)]
-        test_x = train_x[int(len(train_x)*0.7):]
-        train_y = train_y[:int(len(train_x)*0.7)]
+        train_y_all, train_y_one_hot, self.one, self.label = self.train_y_create(df)
+        df = df.join(train_y_all)
+        print("data cleaning.....")
+        train_x_all= df.drop(["train_y", "date", "stock_id", "最後揭示買價", "最後揭示買價", "最後揭示賣價", "最後揭示賣量", "最後揭示買量", "本益比",'漲跌價差'],axis=1)
+        print("train & test data settting....")
+        # test_x ,test_y= shuffle(train_x,train_y_one_hot)
+        train_x = train_x_all[:int(len(train_x_all)*0.7)]
+        train_y = train_y_all[:int(len(train_y_all)*0.7)]
+        test_x = train_x_all[int(len(train_x_all)*0.7):]
+        test_y = train_y_all[int(len(train_y_all)*0.7)+self.train_day:]
+        test_df = df[int(len(train_y_all)*0.7)+self.train_day:]
+        print("data reshape.....")
         train_x= self.datareshape(train_x)
         test_x = self.datareshape(test_x)
+        print("data final processing.....")
         train_x, train_y = self.datafinalprocess(train_y_one_hot,
                                                 train_x,
                                                 train_y)
         for count in iterate_count:
-            self.train_x.append(train_x[:])
-            self.train_y.append(train_y[:])
-        for count in iterate_count:
-            self.test_x.append(test_x)
-        print(train_x.shape)
-        print(train_y.shape)
-        print(test_x.shape)
+            train_x = np.append(train_x,train_x,axis=0)
+            train_y = np.append(train_y,train_y,axis=0)
+        # for count in iterate_count:
         data = {"train_x":train_x,
                 "train_y":train_y,
                 "test_x":test_x,
+                "test_y":test_y,
                 "onehot":self.one,
                 "label":self.label,
-                "df":self.df}
+                "df":self.df,
+                "test_df":test_df}
         return data 
             
 
     def datareshape(self,train_x):
-        print("data reshape .....")
+
         train_x_arr_all = []
         day = self.train_day
         scale = MinMaxScaler()
@@ -104,7 +111,6 @@ class datascience:
         return df
 
     def datafinalprocess(self, train_y, train_x, index_y):
-        print("data final process ")
         # let the 0 1 -1 have equal mount for  training have equal mount
         day = self.train_day
         train_y = train_y[day:]
@@ -129,7 +135,6 @@ class datascience:
         equal_y = [train_y[index - day] for index in index_y_equal[:sample_mount]]
         train_y = np.concatenate((buy_y, sell_y))
         train_y = np.concatenate((train_y, equal_y))
-        print("i'm train_x shape",train_x.shape)
         
         return train_x, train_y
 
@@ -180,13 +185,7 @@ class datascience:
         train_y_bny = label_enconder.fit_transform(train_y)
         train_y_bny = train_y_bny.reshape(-1, 1)
         onehotencoder = OneHotEncoder()
-
         train_y_one_hot = onehotencoder.fit_transform(train_y_bny).toarray()
-        if not os.path.exists("../training"):
-            os.mkdir("../training")
-            self.savefile("onehotencoder", onehotencoder)
-            self.savefile("labelencoder", label_enconder)
-
         train_y = pd.DataFrame(train_y, columns=["train_y"])
         train_y_one_hot = np.array(train_y_one_hot[:])
         return train_y, train_y_one_hot, onehotencoder, label_enconder
